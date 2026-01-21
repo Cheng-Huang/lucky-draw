@@ -2,6 +2,38 @@
 
 [演示地址](https://vitozyf.github.io/lucky-draw/index.html#/?tdsourcetag=s_pctim_aiomsg)
 
+## 部署
+
+### 方式 1：Docker（推荐，避免 Node 版本问题）
+
+```bash
+docker build -t lucky-draw .
+docker run --rm -p 8080:80 lucky-draw
+```
+
+浏览器打开：`http://localhost:8080`
+
+也可以用 `docker compose`：
+
+```bash
+docker compose up --build
+```
+
+### 方式 2：静态站点（GitHub Pages/任意静态托管）
+
+本项目是纯前端，无需后端。构建产物在 `dist/`。
+
+- GitHub Pages（仓库名为 `lucky-draw`）：直接 `npm/yarn build` 即可（默认 `publicPath=/lucky-draw`）
+- 部署到根路径（如自有域名、Vercel、Nginx 根目录）：构建时加环境变量 `PUBLIC_PATH=/`
+
+示例：
+
+```bash
+PUBLIC_PATH=/ yarn build
+```
+
+> 注意：本项目依赖 `node-sass`，建议使用 Node 14（或使用上面的 Docker 方式）。
+
 ## 使用说明
 
 ### 配置建议
