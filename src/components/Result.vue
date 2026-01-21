@@ -2,7 +2,7 @@
   <el-dialog
     :visible="visible"
     @close="$emit('update:visible', false)"
-    :fullscreen="true"
+    width="92vw"
     class="c-Result"
     :append-to-body="true"
   >
@@ -120,13 +120,10 @@ export default {
 <style lang="scss">
 .c-Result {
   .el-dialog {
-    margin: 0 !important;
-    height: 100vh;
-    max-height: 100vh;
-    width: 100vw;
+    max-width: 1200px;
   }
   .el-dialog__body {
-    height: calc(100vh - 60px);
+    max-height: 75vh;
     overflow-y: auto;
     overflow-x: auto;
   }
@@ -134,6 +131,7 @@ export default {
     display: flex;
     line-height: 30px;
     align-items: flex-start;
+    justify-content: center;
     .name {
       flex: 0 0 auto;
       font-weight: bold;
@@ -143,9 +141,12 @@ export default {
     .value {
       flex: 1;
       min-width: 0;
+      text-align: center;
     }
     .card {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       padding: 6px 10px;
       line-height: 20px;
       text-align: center;
@@ -160,6 +161,7 @@ export default {
       cursor: pointer;
       white-space: normal;
       word-break: break-word;
+      max-width: 320px;
       &:hover {
         &::before {
           content: '删除';

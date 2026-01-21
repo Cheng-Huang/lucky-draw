@@ -34,6 +34,15 @@ PUBLIC_PATH=/ yarn build
 
 > 注意：本项目依赖 `node-sass`，建议使用 Node 14（或使用上面的 Docker 方式）。
 
+### 奖项配置文件（可选）
+
+默认会优先使用浏览器本地保存的配置（localStorage）。如需从配置文件读取奖项和数量：
+
+- 编辑 `public/lottery-config.json`
+- 可在该文件增加 `people` 字段（名单），格式：`[{ "key": 1, "name": "Allen Jia" }, ...]`
+- 首次打开（或清理本地数据后刷新）会自动读取该文件
+- 强制从文件读取：在地址后加 `?config=file`；如需同时清空历史抽奖结果：`?config=file&reset=1`
+
 ## 使用说明
 
 ### 配置建议

@@ -187,6 +187,7 @@ export default {
     }
   },
   created() {
+    this.loadFileConfigIfNeeded();
     const data = getData(configField);
     if (data) {
       this.$store.commit('setConfig', Object.assign({}, data));
@@ -247,6 +248,104 @@ export default {
     window.removeEventListener('resize', this.reportWindowSize);
   },
   methods: {
+    async loadFileConfigIfNeeded() {
+      try {
+        const params = new URLSearchParams(window.location.search || '');
+        const forceFile = params.get('config') === 'file';
+        const reset = params.get('reset') === '1';
+        const hasLocalConfig =
+          !!getData(configField) ||
+          !!getData(newLotteryField) ||
+          !!getData(listField);
+
+        if (!forceFile && hasLocalConfig) {
+          return;
+        }
+
+        const baseUrl = (process && process.env && process.env.BASE_URL) || '/';
+        const url = `${baseUrl}lottery-config.json`;
+        const res = await fetch(url, { cache: 'no-store' });
+        if (!res.ok) {
+          return;
+        }
+        const cfg = await res.json();
+        if (!cfg || !cfg.prizes || !Array.isArray(cfg.prizes)) {
+          return;
+        }
+
+        // Optionally reset results to avoid mismatch with new prize keys.
+        if (reset) {
+          this.$store.commit('setClearResult');
+          localStorage.removeItem(resultField);
+        }
+
+        const title = typeof cfg.title === 'string' ? cfg.title : '年会抽奖';
+        const number = Number(cfg.number || 0);
+        if (!number || number <= 0) {
+          return;
+        }
+
+        // Build config + prize metadata.
+        const config = { name: title, number };
+        const prizes = cfg.prizes
+          .map(p => ({
+            key: (p && p.key) || this.makePrizeKey(p && p.name),
+            name: (p && p.name ? String(p.name) : '').trim(),
+            count: Number(p && p.count)
+          }))
+          .filter(p => p.key && p.name);
+
+        prizes.forEach(p => {
+          config[p.key] = Number.isFinite(p.count) ? Math.max(0, p.count) : 0;
+        });
+
+        // Replace prize metadata list.
+        localStorage.setItem(
+          newLotteryField,
+          JSON.stringify(prizes.map(p => ({ key: p.key, name: p.name })))
+        );
+
+        // Apply store state.
+        this.$store.commit('setClearConfig');
+        this.$store.commit('setConfig', config);
+        prizes.forEach(p => {
+          this.$store.commit('upsertLotteryMeta', { key: p.key, name: p.name });
+        });
+
+        // Optional people list: [{key:number,name:string}, ...]
+        if (Array.isArray(cfg.people) && cfg.people.length > 0) {
+          const people = cfg.people
+            .map(p => ({
+              key: Number(p && p.key),
+              name: (p && p.name ? String(p.name) : '').trim()
+            }))
+            .filter(p => p.key > 0 && p.name);
+
+          if (people.length > 0) {
+            this.$store.commit('setClearList');
+            this.$store.commit('setList', people);
+          }
+        }
+      } catch (e) {
+        // Ignore config load failures; fall back to localStorage/defaults.
+      }
+    },
+    makePrizeKey(name) {
+      const n = String(name || '').trim();
+      if (!n) {
+        return '';
+      }
+      // Stable, simple hash (djb2) to support non-latin names too.
+      let hash = 5381;
+      for (let i = 0; i < n.length; i++) {
+        hash = (hash * 33) ^ n.charCodeAt(i);
+      }
+      const safe = n
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '_')
+        .replace(/^_+|_+$/g, '');
+      return `prize_${safe || 'p'}_${(hash >>> 0).toString(16)}`;
+    },
     reportWindowSize() {
       const AppCanvas = this.$el.querySelector('#rootcanvas');
       if (AppCanvas.parentElement) {
@@ -430,8 +529,9 @@ export default {
   position: fixed;
   top: 50%;
   left: 50%;
-  width: 95vw;
-  height: 90vh;
+  width: 92vw;
+  max-width: 1200px;
+  max-height: 75vh;
   transform: translateX(-50%) translateY(-50%);
   text-align: center;
   overflow: auto;
@@ -474,6 +574,8 @@ export default {
       line-height: 1.2;
       white-space: normal;
       word-break: break-word;
+      text-align: center;
+      width: 100%;
     }
   }
   .resbox-title {
@@ -488,6 +590,7 @@ export default {
     overflow-x: auto;
     overflow-y: hidden;
     max-width: 85vw;
+    text-align: center;
   }
   .resbox-title-tip {
     font-size: 14px;
