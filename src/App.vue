@@ -16,7 +16,7 @@
           <a
             href="javascript:void(0);"
             :style="{
-              color: '#fff',
+              color: '#fff'
             }"
           >
             {{ item.name ? item.name : item.key }}
@@ -27,37 +27,29 @@
     </div>
     <transition name="bounce">
       <div id="resbox" v-show="showRes">
-        <p @click="showRes = false">{{ categoryName }}抽奖结果：</p>
+        <p class="resbox-title" @click="showRes = false">
+          <span class="resbox-title-text">{{ categoryName }}抽奖结果：</span>
+          <span class="resbox-title-tip">(点击任意卡片关闭)</span>
+        </p>
         <div class="container">
           <span
             v-for="item in resArr"
             :key="item"
             class="itemres"
             :style="resCardStyle"
-            :data-id="item"
             @click="showRes = false"
-            :class="{
-              numberOver:
-                !!photos.find((d) => d.id === item) ||
-                !!list.find((d) => d.key === item),
-            }"
           >
-            <span class="cont" v-if="!photos.find((d) => d.id === item)">
-              <span
-                v-if="!!list.find((d) => d.key === item)"
-                :style="{
-                  fontSize: '40px',
-                }"
-              >
-                {{ list.find((d) => d.key === item).name }}
+            <span class="cont" v-if="!photos.find(d => d.id === item)">
+              <span v-if="!!list.find(d => d.key === item)" class="winner-name">
+                {{ list.find(d => d.key === item).name }}
               </span>
               <span v-else>
                 {{ item }}
               </span>
             </span>
             <img
-              v-if="photos.find((d) => d.id === item)"
-              :src="photos.find((d) => d.id === item).value"
+              v-if="photos.find(d => d.id === item)"
+              :src="photos.find(d => d.id === item).value"
               alt="photo"
               :width="160"
               :height="160"
@@ -122,7 +114,7 @@ import {
   resultField,
   newLotteryField,
   conversionCategoryName,
-  listField,
+  listField
 } from '@/helper/index';
 import { luckydrawHandler } from '@/helper/algorithm';
 import Result from '@/components/Result';
@@ -148,7 +140,7 @@ export default {
     config: {
       get() {
         return this.$store.state.config;
-      },
+      }
     },
     result: {
       get() {
@@ -156,7 +148,7 @@ export default {
       },
       set(val) {
         this.$store.commit('setResult', val);
-      },
+      }
     },
     list() {
       return this.$store.state.list;
@@ -176,13 +168,13 @@ export default {
       const nums = number >= 1500 ? 500 : this.config.number;
       const configNum = number > 1500 ? Math.floor(number / 3) : number;
       const randomShowNums = luckydrawHandler(configNum, [], nums);
-      const randomShowDatas = randomShowNums.map((item) => {
-        const listData = this.list.find((d) => d.key === item);
-        const photo = this.photos.find((d) => d.id === item);
+      const randomShowDatas = randomShowNums.map(item => {
+        const listData = this.list.find(d => d.key === item);
+        const photo = this.photos.find(d => d.id === item);
         return {
           key: item * (number > 1500 ? 3 : 1),
           name: listData ? listData.name : '',
-          photo: photo ? photo.value : '',
+          photo: photo ? photo.value : ''
         };
       });
       return randomShowDatas;
@@ -192,7 +184,7 @@ export default {
     },
     photos() {
       return this.$store.state.photos;
-    },
+    }
   },
   created() {
     const data = getData(configField);
@@ -207,7 +199,7 @@ export default {
     const newLottery = getData(newLotteryField);
     if (newLottery) {
       const config = this.config;
-      newLottery.forEach((item) => {
+      newLottery.forEach(item => {
         this.$store.commit('setNewLottery', item);
         if (!config[item.key]) {
           this.$set(config, item.key, 0);
@@ -231,7 +223,7 @@ export default {
       resArr: [],
       category: '',
       audioPlaying: false,
-      audioSrc: bgaudio,
+      audioSrc: bgaudio
     };
   },
   watch: {
@@ -241,8 +233,8 @@ export default {
         this.$nextTick(() => {
           this.reloadTagCanvas();
         });
-      },
-    },
+      }
+    }
   },
   mounted() {
     this.startTagCanvas();
@@ -282,7 +274,7 @@ export default {
       });
     },
     getPhoto() {
-      database.getAll(DB_STORE_NAME).then((res) => {
+      database.getAll(DB_STORE_NAME).then(res => {
         if (res && res.length > 0) {
           this.$store.commit('setPhotos', res);
         }
@@ -307,7 +299,7 @@ export default {
         dragControl: 1,
         textHeight: 20,
         noSelect: true,
-        lock: 'xy',
+        lock: 'xy'
       });
     },
     reloadTagCanvas() {
@@ -360,14 +352,14 @@ export default {
         }
         const oldRes = this.result[category] || [];
         const data = Object.assign({}, this.result, {
-          [category]: oldRes.concat(resArr),
+          [category]: oldRes.concat(resArr)
         });
         this.result = data;
         window.TagCanvas.SetSpeed('rootcanvas', [5, 1]);
         this.running = !this.running;
       }
-    },
-  },
+    }
+  }
 };
 </script>
 <style lang="scss">
@@ -435,16 +427,20 @@ export default {
 }
 
 #resbox {
-  position: absolute;
+  position: fixed;
   top: 50%;
   left: 50%;
-  width: 1280px;
+  width: 95vw;
+  height: 90vh;
   transform: translateX(-50%) translateY(-50%);
   text-align: center;
+  overflow: auto;
+  padding: 10px 10px 20px;
   p {
     color: red;
-    font-size: 50px;
-    line-height: 120px;
+    font-size: 42px;
+    line-height: 70px;
+    margin: 0 0 10px;
   }
   .container {
     display: flex;
@@ -453,11 +449,11 @@ export default {
   }
   .itemres {
     background: #fff;
-    width: 160px;
-    height: 160px;
+    min-width: 220px;
+    min-height: 80px;
     border-radius: 4px;
     border: 1px solid #ccc;
-    line-height: 160px;
+    line-height: 1.2;
     font-weight: bold;
     margin-right: 20px;
     margin-bottom: 20px;
@@ -466,24 +462,37 @@ export default {
     align-items: center;
     justify-content: center;
     position: relative;
+    padding: 14px 12px;
     .cont {
       display: flex;
       justify-content: center;
       align-items: center;
+      width: 100%;
     }
-    &.numberOver::before {
-      content: attr(data-id);
-      width: 30px;
-      height: 22px;
-      line-height: 22px;
-      background-color: #fff;
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      font-size: 14px;
-      // border-radius: 50%;
-      z-index: 1;
+    .winner-name {
+      font-size: 36px;
+      line-height: 1.2;
+      white-space: normal;
+      word-break: break-word;
     }
+  }
+  .resbox-title {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: baseline;
+    justify-content: center;
+    gap: 10px;
+    white-space: nowrap;
+  }
+  .resbox-title-text {
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-width: 85vw;
+  }
+  .resbox-title-tip {
+    font-size: 14px;
+    color: #fff;
+    opacity: 0.7;
   }
 }
 </style>

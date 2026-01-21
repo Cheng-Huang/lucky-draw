@@ -2,6 +2,7 @@ import Vue from 'vue';
 import Vuex from 'vuex';
 import {
   setData,
+  configField,
   resultField,
   newLotteryField,
   listField
@@ -58,6 +59,7 @@ export default new Vuex.Store({
     },
     setConfig(state, config) {
       state.config = config;
+      setData(configField, state.config);
     },
     setResult(state, result = {}) {
       state.result = result;
@@ -65,11 +67,43 @@ export default new Vuex.Store({
       setData(resultField, state.result);
     },
     setNewLottery(state, newLottery) {
-      if (state.newLottery.find(item => item.name === newLottery.name)) {
+      if (
+        state.newLottery.find(
+          item => item.key === newLottery.key || item.name === newLottery.name
+        )
+      ) {
         return;
       }
       state.newLottery.push(newLottery);
       setData(newLotteryField, state.newLottery);
+    },
+    upsertLotteryMeta(state, meta) {
+      const { key, name } = meta || {};
+      if (!key || !name) {
+        return;
+      }
+      const idx = state.newLottery.findIndex(item => item.key === key);
+      if (idx > -1) {
+        state.newLottery[idx].name = name;
+      } else {
+        state.newLottery.push({ key, name });
+      }
+      setData(newLotteryField, state.newLottery);
+    },
+    removeLottery(state, key) {
+      if (!key) {
+        return;
+      }
+      state.newLottery = state.newLottery.filter(item => item.key !== key);
+      if (Object.prototype.hasOwnProperty.call(state.config, key)) {
+        Vue.delete(state.config, key);
+      }
+      if (Object.prototype.hasOwnProperty.call(state.result, key)) {
+        Vue.delete(state.result, key);
+      }
+      setData(newLotteryField, state.newLottery);
+      setData(configField, state.config);
+      setData(resultField, state.result);
     },
     setList(state, list) {
       const arr = state.list;

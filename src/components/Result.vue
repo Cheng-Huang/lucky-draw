@@ -2,7 +2,7 @@
   <el-dialog
     :visible="visible"
     @close="$emit('update:visible', false)"
-    width="600px"
+    :fullscreen="true"
     class="c-Result"
     :append-to-body="true"
   >
@@ -37,7 +37,7 @@
           :key="j"
           :data-res="data"
         >
-          {{ data }}
+          {{ getWinnerName(data) }}
         </span>
       </span>
     </div>
@@ -59,6 +59,9 @@ export default {
         this.$store.commit('setResult', val);
       }
     },
+    list() {
+      return this.$store.state.list;
+    },
     resultList() {
       const list = [];
       for (const key in this.result) {
@@ -76,6 +79,11 @@ export default {
     }
   },
   methods: {
+    getWinnerName(id) {
+      const key = Number(id);
+      const item = (this.list || []).find(d => d.key === key);
+      return item && item.name ? item.name : String(id);
+    },
     deleteRes(event, row) {
       const Index = getDomData(event.target, 'res');
       if (!Index) {
@@ -111,25 +119,35 @@ export default {
 </script>
 <style lang="scss">
 .c-Result {
+  .el-dialog {
+    margin: 0 !important;
+    height: 100vh;
+    max-height: 100vh;
+    width: 100vw;
+  }
   .el-dialog__body {
-    max-height: 500px;
+    height: calc(100vh - 60px);
     overflow-y: auto;
+    overflow-x: auto;
   }
   .listrow {
     display: flex;
     line-height: 30px;
+    align-items: flex-start;
     .name {
-      width: 80px;
+      flex: 0 0 auto;
       font-weight: bold;
+      white-space: nowrap;
+      margin-right: 10px;
     }
     .value {
       flex: 1;
+      min-width: 0;
     }
     .card {
       display: inline-block;
-      // width: 40px;
-      padding: 0 5px;
-      line-height: 30px;
+      padding: 6px 10px;
+      line-height: 20px;
       text-align: center;
       font-size: 18px;
       font-weight: bold;
@@ -140,6 +158,8 @@ export default {
       margin-bottom: 5px;
       position: relative;
       cursor: pointer;
+      white-space: normal;
+      word-break: break-word;
       &:hover {
         &::before {
           content: '删除';

@@ -301,16 +301,22 @@ export default {
       const rows = listStr.split('\n');
       if (rows && rows.length > 0) {
         rows.forEach(item => {
-          const rowList = item.split(/\t|\s/);
-          if (rowList.length >= 2) {
-            const key = Number(rowList[0].trim());
-            const name = rowList[1].trim();
-            key &&
-              list.push({
-                key,
-                name
-              });
+          const row = String(item || '').trim();
+          if (!row) {
+            return;
           }
+          // Support names with spaces (e.g. "1 Mary Jane Watson")
+          // Accept both tabs/spaces between number and name.
+          const match = row.match(/^(\d+)\s+(.+)$/);
+          if (!match) {
+            return;
+          }
+          const key = Number(match[1]);
+          const name = String(match[2] || '').trim();
+          if (!key || !name) {
+            return;
+          }
+          list.push({ key, name });
         });
       }
       this.$store.commit('setList', list);

@@ -31,30 +31,38 @@
             :step="1"
           ></el-input>
         </el-form-item>
-        <el-form-item label="一等奖">
-          <el-input
-            type="number"
-            v-model="form.firstPrize"
-            :min="0"
-            :step="1"
-          ></el-input>
-        </el-form-item>
-        <el-form-item
-          :label="newitem.name"
-          v-for="newitem in storeNewLottery"
-          :key="newitem.key"
-        >
-          <el-input
-            type="number"
-            :min="0"
-            :step="1"
-            v-model="form[newitem.key]"
-            @change="
-              val => {
-                form[newitem.key] = Number(val);
-              }
-            "
-          ></el-input>
+        <el-form-item label="奖项设置">
+          <div class="prize-list">
+            <div class="prize-row" v-for="item in prizeList" :key="item.key">
+              <el-input
+                class="prize-name"
+                size="mini"
+                v-model="prizeNames[item.key]"
+                placeholder="奖项名称"
+              ></el-input>
+              <el-input
+                class="prize-qty"
+                size="mini"
+                type="number"
+                :min="0"
+                :step="1"
+                v-model="form[item.key]"
+                @change="
+                  val => {
+                    form[item.key] = Number(val);
+                  }
+                "
+              ></el-input>
+              <el-button
+                class="prize-del"
+                size="mini"
+                type="danger"
+                plain
+                @click="removePrize(item.key)"
+                >删除</el-button
+              >
+            </div>
+          </div>
         </el-form-item>
       </el-form>
     </div>
@@ -79,7 +87,7 @@
   </el-dialog>
 </template>
 <script>
-import { setData, configField } from '@/helper/index';
+import { setData, configField, newLotteryField, getData } from '@/helper/index';
 import { randomNum } from '@/helper/algorithm';
 export default {
   name: 'LotteryConfig',
@@ -98,16 +106,70 @@ export default {
     },
     storeNewLottery() {
       return this.$store.state.newLottery;
+    },
+    prizeList() {
+      const list = [];
+      const hasFirstPrize =
+        Object.prototype.hasOwnProperty.call(this.form, 'firstPrize') ||
+        (this.storeNewLottery || []).some(item => item.key === 'firstPrize');
+      if (hasFirstPrize) {
+        list.push({ key: 'firstPrize' });
+      }
+      return list.concat(
+        (this.storeNewLottery || []).filter(item => item.key !== 'firstPrize')
+      );
     }
   },
   data() {
     return {
       showAddLottery: false,
-      newLottery: { name: '' }
+      newLottery: { name: '' },
+      prizeNames: {}
     };
   },
+  created() {
+    this.initPrizeNames();
+  },
+  watch: {
+    visible(v) {
+      if (v) {
+        this.initPrizeNames();
+      }
+    },
+    storeNewLottery: {
+      deep: true,
+      handler() {
+        this.initPrizeNames();
+      }
+    }
+  },
   methods: {
+    initPrizeNames() {
+      const names = {};
+      const newLottery = getData(newLotteryField) || this.storeNewLottery || [];
+      if (
+        Object.prototype.hasOwnProperty.call(this.form, 'firstPrize') ||
+        newLottery.some(item => item.key === 'firstPrize')
+      ) {
+        const first = newLottery.find(item => item.key === 'firstPrize');
+        names.firstPrize = first ? first.name : '一等奖';
+      }
+      newLottery
+        .filter(item => item && item.key && item.key !== 'firstPrize')
+        .forEach(item => {
+          names[item.key] = item.name;
+        });
+      this.prizeNames = names;
+    },
     onSubmit() {
+      // Persist prize names (including firstPrize rename)
+      this.prizeList.forEach(item => {
+        const key = item.key;
+        const name = (this.prizeNames[key] || '').trim();
+        if (name) {
+          this.$store.commit('upsertLotteryMeta', { key, name });
+        }
+      });
       setData(configField, this.form);
       this.$store.commit('setConfig', this.form);
       this.$emit('update:visible', false);
@@ -139,8 +201,33 @@ export default {
         name: this.newLottery.name
       };
       this.$store.commit('setNewLottery', data);
+      if (typeof this.form[field] === 'undefined') {
+        this.$set(this.form, field, 0);
+      }
 
       this.showAddLottery = false;
+    },
+    removePrize(key) {
+      this.$confirm(
+        '此操作将删除该奖项（同时会移除该奖项已有的抽奖结果），确认删除?',
+        '警告',
+        {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'warning'
+        }
+      )
+        .then(() => {
+          this.$store.commit('removeLottery', key);
+          this.$message({
+            type: 'success',
+            message: '删除成功!'
+          });
+          this.$nextTick(() => {
+            this.$emit('resetconfig');
+          });
+        })
+        .catch(() => {});
     }
   }
 };
@@ -153,6 +240,25 @@ export default {
       height: 100%;
       overflow-y: auto;
       padding: 0 10px;
+    }
+    .prize-list {
+      width: 100%;
+      .prize-row {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
+        .prize-name {
+          flex: 1;
+          margin-right: 8px;
+        }
+        .prize-qty {
+          width: 90px;
+          margin-right: 8px;
+        }
+        .prize-del {
+          flex: 0 0 auto;
+        }
+      }
     }
   }
 }
