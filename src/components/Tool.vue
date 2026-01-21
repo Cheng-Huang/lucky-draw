@@ -1,17 +1,12 @@
 <template>
   <div id="tool">
-    <el-button @click="startHandler" type="primary" size="mini">{{
-      running ? '停止' : '开始'
-    }}</el-button>
-    <el-button size="mini" @click="showRemoveoptions = true">
-      重置
-    </el-button>
-    <el-button size="mini" @click="showImport = true">
-      导入名单
-    </el-button>
-    <el-button size="mini" @click="showImportphoto = true">
-      导入照片
-    </el-button>
+    <el-button
+      class="start-btn"
+      @click="startHandler"
+      type="primary"
+      size="medium"
+      >{{ running ? '停止' : '开始' }}</el-button
+    >
     <el-dialog
       :append-to-body="true"
       :visible.sync="showSetwat"
@@ -192,7 +187,7 @@ export default {
       removeInfo: { type: 0 },
       form: {
         category: '',
-        mode: 1,
+        mode: 0,
         qty: 1,
         allin: false
       },
@@ -200,6 +195,12 @@ export default {
     };
   },
   watch: {
+    showSetwat(v) {
+      if (v) {
+        // Default to "一次抽取完"
+        this.form.mode = 0;
+      }
+    },
     showRemoveoptions(v) {
       if (!v) {
         this.removeInfo.type = 0;
@@ -207,6 +208,15 @@ export default {
     }
   },
   methods: {
+    openResetOptions() {
+      this.showRemoveoptions = true;
+    },
+    openImportList() {
+      this.showImport = true;
+    },
+    openImportPhoto() {
+      this.showImportphoto = true;
+    },
     resetConfig() {
       const type = this.removeInfo.type;
       this.$confirm('此操作将重置所选数据，是否继续?', '提示', {
@@ -336,7 +346,7 @@ export default {
 <style lang="scss">
 #tool {
   position: fixed;
-  width: 60px;
+  width: 92px;
   top: 50%;
   right: 20px;
   transform: translateY(-50%);
@@ -345,6 +355,14 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  z-index: 1000;
+  .start-btn {
+    width: 100%;
+    font-size: 20px;
+    font-weight: 800;
+    border-radius: 12px;
+    padding: 10px 0;
+  }
   .el-button + .el-button {
     margin-top: 20px;
     margin-left: 0px;

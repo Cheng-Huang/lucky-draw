@@ -2,7 +2,7 @@
   <el-dialog
     :visible="visible"
     @close="$emit('update:visible', false)"
-    width="92vw"
+    :fullscreen="true"
     class="c-Result"
     :append-to-body="true"
   >
@@ -11,7 +11,7 @@
         抽奖结果
       </span>
       <span :style="{ fontSize: '14px', color: '#999', marginLeft: '10px' }">
-        (点击号码可以删除)
+        (点击姓名可以删除)
       </span>
     </div>
     <div
@@ -31,13 +31,15 @@
         <span v-if="item.value && item.value.length === 0">
           暂未抽奖
         </span>
-        <span
-          class="card"
-          v-for="(data, j) in item.value"
-          :key="j"
-          :data-res="data"
-        >
-          {{ getWinnerName(data) }}
+        <span class="winners" v-else>
+          <span
+            class="winner"
+            v-for="(data, j) in item.value"
+            :key="j"
+            :data-res="data"
+          >
+            {{ getWinnerName(data) }}
+          </span>
         </span>
       </span>
     </div>
@@ -51,6 +53,9 @@ export default {
     visible: Boolean
   },
   computed: {
+    config() {
+      return this.$store.state.config;
+    },
     result: {
       get() {
         return this.$store.state.result;
@@ -64,16 +69,24 @@ export default {
     },
     resultList() {
       const list = [];
-      for (const key in this.result) {
-        if (this.result.hasOwnProperty(key)) {
-          const element = this.result[key];
-          let name = conversionCategoryName(key);
-          list.push({
-            label: key,
-            name,
-            value: element
-          });
+      const cfg = this.config || {};
+      for (const key in cfg) {
+        if (!Object.prototype.hasOwnProperty.call(cfg, key)) {
+          continue;
         }
+        const count = cfg[key];
+        if (typeof count !== 'number' || count <= 0) {
+          continue;
+        }
+        const name = conversionCategoryName(key);
+        if (!name) {
+          continue;
+        }
+        list.push({
+          label: key,
+          name,
+          value: this.result && this.result[key] ? this.result[key] : []
+        });
       }
       return list;
     }
@@ -119,55 +132,55 @@ export default {
 </script>
 <style lang="scss">
 .c-Result {
-  .el-dialog {
-    max-width: 1200px;
-  }
   .el-dialog__body {
-    max-height: 75vh;
+    height: calc(100vh - 60px);
     overflow-y: auto;
     overflow-x: auto;
   }
   .listrow {
-    display: flex;
-    line-height: 30px;
-    align-items: flex-start;
-    justify-content: center;
+    display: grid;
+    grid-template-columns: minmax(220px, 320px) 1fr;
+    column-gap: 16px;
+    align-items: start;
+    padding: 12px 18px;
+    border-bottom: 1px solid rgba(17, 24, 39, 0.08);
     .name {
-      flex: 0 0 auto;
+      text-align: left;
       font-weight: bold;
       white-space: nowrap;
-      margin-right: 10px;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .value {
-      flex: 1;
       min-width: 0;
-      text-align: center;
+      text-align: left;
     }
-    .card {
+    .winners {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 10px;
+    }
+    .winner {
       display: inline-flex;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       padding: 6px 10px;
       line-height: 20px;
-      text-align: center;
+      text-align: left;
       font-size: 18px;
       font-weight: bold;
       border-radius: 4px;
-      border: 1px solid #ccc;
-      background-color: #f2f2f2;
-      margin-left: 5px;
-      margin-bottom: 5px;
+      border: 1px solid rgba(17, 24, 39, 0.14);
+      background-color: rgba(255, 255, 255, 0.92);
       position: relative;
       cursor: pointer;
-      white-space: normal;
-      word-break: break-word;
-      max-width: 320px;
+      white-space: nowrap;
       &:hover {
         &::before {
           content: '删除';
           width: 100%;
           height: 100%;
-          background-color: #ccc;
+          background-color: rgba(0, 0, 0, 0.08);
           position: absolute;
           left: 0;
           top: 0;

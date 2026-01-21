@@ -2,12 +2,48 @@
   <div id="root">
     <header>
       <Publicity v-show="!running" />
-      <el-button class="res" type="text" @click="showResult = true">
-        抽奖结果
-      </el-button>
-      <el-button class="con" type="text" @click="showConfig = true">
-        抽奖配置
-      </el-button>
+      <div v-show="!showResult && !showPrizeList" class="webex-logo-float">
+        <img :src="webexLogoSrc" alt="Webex" />
+      </div>
+      <div v-show="!showResult && !showPrizeList" class="header-actions">
+        <el-dropdown
+          class="header-dropdown"
+          trigger="click"
+          placement="bottom-end"
+          @command="onSettingsCommand"
+        >
+          <el-button
+            class="header-btn header-icon-btn"
+            type="text"
+            title="设置"
+          >
+            <i class="el-icon-setting"></i>
+          </el-button>
+          <el-dropdown-menu slot="dropdown" class="settings-menu">
+            <el-dropdown-item command="showResult">抽奖结果</el-dropdown-item>
+            <el-dropdown-item command="showPrizeList"
+              >奖品清单</el-dropdown-item
+            >
+            <el-dropdown-item divided command="config"
+              >抽奖配置</el-dropdown-item
+            >
+            <el-dropdown-item command="reset">重置</el-dropdown-item>
+            <el-dropdown-item command="importList">导入名单</el-dropdown-item>
+            <el-dropdown-item command="importPhoto">导入照片</el-dropdown-item>
+          </el-dropdown-menu>
+        </el-dropdown>
+
+        <el-button
+          class="header-btn header-icon-btn"
+          type="text"
+          :title="audioPlaying ? '音乐：暂停' : '音乐：播放'"
+          @click="playAudio(!audioPlaying)"
+        >
+          <i
+            :class="audioPlaying ? 'el-icon-video-pause' : 'el-icon-video-play'"
+          ></i>
+        </el-button>
+      </div>
     </header>
     <div id="main" :class="{ mask: showRes }"></div>
     <div id="tags">
@@ -28,8 +64,7 @@
     <transition name="bounce">
       <div id="resbox" v-show="showRes">
         <p class="resbox-title" @click="showRes = false">
-          <span class="resbox-title-text">{{ categoryName }}抽奖结果：</span>
-          <span class="resbox-title-tip">(点击任意卡片关闭)</span>
+          <span class="resbox-title-text">{{ categoryName }}</span>
         </p>
         <div class="container">
           <span
@@ -56,33 +91,24 @@
             />
           </span>
         </div>
+        <p class="resbox-close-tip" @click="showRes = false">
+          点击任意卡片关闭
+        </p>
       </div>
     </transition>
 
-    <el-button
-      class="audio"
-      type="text"
-      @click="
-        () => {
-          playAudio(!audioPlaying);
-        }
-      "
-    >
-      <i
-        class="iconfont"
-        :class="[audioPlaying ? 'iconstop' : 'iconplay1']"
-      ></i>
-    </el-button>
-
     <LotteryConfig :visible.sync="showConfig" @resetconfig="reloadTagCanvas" />
     <Tool
+      ref="tool"
       @toggle="toggle"
       @resetConfig="reloadTagCanvas"
       @getPhoto="getPhoto"
       :running="running"
       :closeRes="closeRes"
+      v-show="!showResult && !showPrizeList"
     />
     <Result :visible.sync="showResult"></Result>
+    <PrizeList :visible.sync="showPrizeList" />
 
     <span class="copy-right">
       Copyright©zhangyongfeng5350@gmail.com
@@ -118,13 +144,18 @@ import {
 } from '@/helper/index';
 import { luckydrawHandler } from '@/helper/algorithm';
 import Result from '@/components/Result';
+import PrizeList from '@/components/PrizeList';
 import { database, DB_STORE_NAME } from '@/helper/db';
 export default {
   name: 'App',
 
-  components: { LotteryConfig, Publicity, Tool, Result },
+  components: { LotteryConfig, Publicity, Tool, Result, PrizeList },
 
   computed: {
+    webexLogoSrc() {
+      const baseUrl = (process && process.env && process.env.BASE_URL) || '/';
+      return `${baseUrl}webex-logo.svg`;
+    },
     resCardStyle() {
       const style = { fontSize: '30px' };
       const { number } = this.config;
@@ -221,6 +252,7 @@ export default {
       showRes: false,
       showConfig: false,
       showResult: false,
+      showPrizeList: false,
       resArr: [],
       category: '',
       audioPlaying: false,
@@ -248,6 +280,30 @@ export default {
     window.removeEventListener('resize', this.reportWindowSize);
   },
   methods: {
+    onSettingsCommand(command) {
+      switch (command) {
+        case 'showResult':
+          this.showResult = true;
+          break;
+        case 'showPrizeList':
+          this.showPrizeList = true;
+          break;
+        case 'config':
+          this.showConfig = true;
+          break;
+        case 'reset':
+          this.$refs.tool && this.$refs.tool.openResetOptions();
+          break;
+        case 'importList':
+          this.$refs.tool && this.$refs.tool.openImportList();
+          break;
+        case 'importPhoto':
+          this.$refs.tool && this.$refs.tool.openImportPhoto();
+          break;
+        default:
+          break;
+      }
+    },
     async loadFileConfigIfNeeded() {
       try {
         const params = new URLSearchParams(window.location.search || '');
@@ -475,36 +531,44 @@ export default {
     filter: blur(5px);
   }
   header {
-    height: 50px;
-    line-height: 50px;
+    height: 48px;
+    line-height: 48px;
     position: relative;
-    .el-button {
+    overflow: visible;
+    .header-actions {
       position: absolute;
-      top: 17px;
+      top: 0;
+      right: 20px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      z-index: 1100;
+    }
+    .header-btn {
       padding: 0;
-      z-index: 9999;
-      &.con {
-        right: 20px;
-      }
-      &.res {
-        right: 100px;
+      height: 48px;
+      line-height: 48px;
+    }
+    .header-icon-btn {
+      width: 44px;
+      text-align: center;
+      i {
+        font-size: 22px;
       }
     }
   }
-  .audio {
+  .webex-logo-float {
     position: absolute;
-    top: 100px;
-    right: 30px;
-    width: 40px;
-    height: 40px;
-    line-height: 40px;
-    border: 1px solid #fff;
-    border-radius: 50%;
-    padding: 0;
-    text-align: center;
-    .iconfont {
-      position: relative;
-      left: 1px;
+    left: 12px;
+    top: 6px;
+    z-index: 1090;
+    pointer-events: none;
+    padding: 10px 12px;
+    img {
+      height: 84px;
+      width: auto;
+      display: block;
     }
   }
   .copy-right {
@@ -579,23 +643,23 @@ export default {
     }
   }
   .resbox-title {
-    display: flex;
-    flex-wrap: nowrap;
-    align-items: baseline;
-    justify-content: center;
-    gap: 10px;
-    white-space: nowrap;
+    margin: 0 0 14px;
   }
   .resbox-title-text {
-    overflow-x: auto;
-    overflow-y: hidden;
-    max-width: 85vw;
+    display: block;
+    font-weight: 900;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.55);
+    white-space: normal;
+    word-break: break-word;
     text-align: center;
   }
-  .resbox-title-tip {
+  .resbox-close-tip {
+    margin: 6px 0 0;
     font-size: 14px;
-    color: #fff;
-    opacity: 0.7;
+    line-height: 20px;
+    color: rgba(255, 255, 255, 0.75);
+    text-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+    cursor: pointer;
   }
 }
 </style>
