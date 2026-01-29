@@ -24,6 +24,9 @@
             <el-dropdown-item command="showPrizeList"
               >奖品清单</el-dropdown-item
             >
+            <el-dropdown-item command="exportWinners"
+              >导出中奖名单</el-dropdown-item
+            >
             <el-dropdown-item divided command="config"
               >抽奖配置</el-dropdown-item
             >
@@ -293,6 +296,9 @@ export default {
         case 'showPrizeList':
           this.showPrizeList = true;
           break;
+        case 'exportWinners':
+          this.exportWinners();
+          break;
         case 'config':
           this.showConfig = true;
           break;
@@ -308,6 +314,111 @@ export default {
         default:
           break;
       }
+    },
+    exportWinners() {
+      const config = this.$store.state.config || {};
+      const result = this.$store.state.result || {};
+      const list = this.$store.state.list || [];
+      const meta = this.$store.state.newLottery || [];
+
+      const idToName = new Map(
+        (Array.isArray(list) ? list : []).map(p => [Number(p.key), p.name])
+      );
+      const getPrizeName = key => {
+        const m = (Array.isArray(meta) ? meta : []).find(
+          i => i && i.key === key
+        );
+        if (m && m.name) {
+          return String(m.name).trim();
+        }
+        if (key === 'firstPrize') {
+          return '一等奖';
+        }
+        // fallback to key if we have no metadata
+        return String(key || '');
+      };
+
+      const orderedKeys = (Array.isArray(meta) ? meta : [])
+        .map(i => i && i.key)
+        .filter(Boolean);
+      const keys = orderedKeys.concat(
+        Object.keys(result || {}).filter(k => !orderedKeys.includes(k))
+      );
+
+      const rows = [];
+      const winnerIds = new Set();
+      keys.forEach(key => {
+        const winners = result[key];
+        if (!Array.isArray(winners) || winners.length === 0) {
+          return;
+        }
+        const prizeName = getPrizeName(key);
+        winners.forEach(id => {
+          const n = Number(id);
+          const name = idToName.get(n) || String(id);
+          rows.push({ prizeName, id: n || id, name });
+          if (Number.isFinite(n) && n > 0) {
+            winnerIds.add(n);
+          }
+        });
+      });
+
+      // Participants: prefer explicit people list, else 1..number.
+      let participants = [];
+      if (Array.isArray(list) && list.length > 0) {
+        participants = list
+          .map(p => Number(p && p.key))
+          .filter(n => Number.isFinite(n) && n > 0);
+      } else {
+        const total = Number(config.number || 0);
+        if (Number.isFinite(total) && total > 0) {
+          participants = Array.from({ length: total }, (_, i) => i + 1);
+        }
+      }
+      participants = Array.from(new Set(participants)).sort((a, b) => a - b);
+
+      const notWinners = participants.filter(id => !winnerIds.has(id));
+      notWinners.forEach(id => {
+        rows.push({
+          prizeName: '未中奖',
+          id,
+          name: idToName.get(id) || String(id)
+        });
+      });
+
+      if (rows.length === 0) {
+        this.$message && this.$message.warning('暂无名单数据可导出');
+        return;
+      }
+
+      const escapeCsv = v => {
+        const safe = v === null || v === undefined ? '' : v;
+        const s = String(safe);
+        return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+      };
+      const lines = [
+        ['奖项', '编号', '姓名'].join(','),
+        ...rows.map(r => [r.prizeName, r.id, r.name].map(escapeCsv).join(','))
+      ];
+      const csv = '\uFEFF' + lines.join('\n'); // BOM for Excel
+
+      const pad2 = n => String(n).padStart(2, '0');
+      const d = new Date();
+      const ts = `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(
+        d.getDate()
+      )}_${pad2(d.getHours())}${pad2(d.getMinutes())}${pad2(d.getSeconds())}`;
+      const title = String(config.name || '抽奖').trim() || '抽奖';
+      const filename = `${title}_中奖名单_${ts}.csv`;
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
     },
     async loadFileConfigIfNeeded() {
       try {
