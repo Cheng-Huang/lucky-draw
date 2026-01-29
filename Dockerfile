@@ -7,6 +7,8 @@ COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
 
 COPY . .
+ARG PUBLIC_PATH=/
+ENV PUBLIC_PATH=${PUBLIC_PATH}
 RUN yarn build
 
 # Serve stage

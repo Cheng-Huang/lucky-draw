@@ -11,6 +11,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# local static-server artifacts
+.lucky-draw-http.log
+.lucky-draw-http.pid
+
 # Editor directories and files
 .idea
 .vscode

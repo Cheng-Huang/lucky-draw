@@ -14,34 +14,55 @@
         (点击姓名可以删除)
       </span>
     </div>
-    <div
-      v-for="(item, index) in resultList"
-      :key="index"
-      class="listrow"
-      @click="
-        event => {
-          deleteRes(event, item);
-        }
-      "
-    >
-      <span class="name">
-        {{ item.name }}
-      </span>
-      <span class="value">
-        <span v-if="item.value && item.value.length === 0">
-          暂未抽奖
+    <div class="result-safe">
+      <div
+        v-for="(item, index) in resultList"
+        :key="index"
+        class="listrow"
+        @click="
+          event => {
+            deleteRes(event, item);
+          }
+        "
+      >
+        <span class="name">
+          {{ item.name }}
         </span>
-        <span class="winners" v-else>
-          <span
-            class="winner"
-            v-for="(data, j) in item.value"
-            :key="j"
-            :data-res="data"
-          >
-            {{ getWinnerName(data) }}
+        <span class="value">
+          <span v-if="item.value && item.value.length === 0">
+            暂未抽奖
+          </span>
+          <span class="winners" v-else>
+            <span
+              class="winner"
+              v-for="(data, j) in item.value"
+              :key="j"
+              :data-res="data"
+            >
+              {{ getWinnerName(data) }}
+            </span>
           </span>
         </span>
-      </span>
+      </div>
+
+      <div class="listrow not-winners">
+        <span class="name">
+          未中奖名单
+          <span class="count" v-if="notWinnerIds && notWinnerIds.length > 0">
+            ({{ notWinnerIds.length }})
+          </span>
+        </span>
+        <span class="value">
+          <span v-if="!notWinnerIds || notWinnerIds.length === 0">
+            暂无
+          </span>
+          <span class="winners" v-else>
+            <span class="winner" v-for="(id, j) in notWinnerIds" :key="j">
+              {{ getWinnerName(id) }}
+            </span>
+          </span>
+        </span>
+      </div>
     </div>
   </el-dialog>
 </template>
@@ -66,6 +87,44 @@ export default {
     },
     list() {
       return this.$store.state.list;
+    },
+    notWinnerIds() {
+      const config = this.config || {};
+      const total = Number(config.number || 0);
+
+      // Participants: prefer explicit people list, else 1..number.
+      let participants = [];
+      if (Array.isArray(this.list) && this.list.length > 0) {
+        participants = this.list
+          .map(p => Number(p && p.key))
+          .filter(n => Number.isFinite(n) && n > 0);
+      } else if (Number.isFinite(total) && total > 0) {
+        participants = Array.from({ length: total }, (_, i) => i + 1);
+      } else {
+        return [];
+      }
+
+      // Winners: union all result arrays.
+      const winners = new Set();
+      const result = this.result || {};
+      Object.keys(result).forEach(k => {
+        const arr = result[k];
+        if (!Array.isArray(arr)) {
+          return;
+        }
+        arr.forEach(id => {
+          const n = Number(id);
+          if (Number.isFinite(n) && n > 0) {
+            winners.add(n);
+          }
+        });
+      });
+
+      // Unique + stable order.
+      const uniqueParticipants = Array.from(new Set(participants));
+      uniqueParticipants.sort((a, b) => a - b);
+
+      return uniqueParticipants.filter(id => !winners.has(id));
     },
     resultList() {
       const list = [];
@@ -132,17 +191,33 @@ export default {
 </script>
 <style lang="scss">
 .c-Result {
+  --result-safe-x: clamp(80px, 18vw, 680px);
+
+  .el-dialog__header {
+    padding-left: var(--result-safe-x);
+    padding-right: var(--result-safe-x);
+  }
+  .el-dialog__headerbtn {
+    right: var(--result-safe-x);
+  }
   .el-dialog__body {
     height: calc(100vh - 60px);
     overflow-y: auto;
     overflow-x: auto;
+    padding-left: var(--result-safe-x);
+    padding-right: var(--result-safe-x);
+  }
+  .result-safe {
+    width: min(1400px, 100%);
+    margin: 0 auto;
+    padding-bottom: 24px;
   }
   .listrow {
     display: grid;
-    grid-template-columns: minmax(220px, 320px) 1fr;
-    column-gap: 16px;
+    grid-template-columns: minmax(140px, 220px) 1fr;
+    column-gap: 12px;
     align-items: start;
-    padding: 12px 18px;
+    padding: 12px 0;
     border-bottom: 1px solid rgba(17, 24, 39, 0.08);
     .name {
       text-align: left;
@@ -185,6 +260,27 @@ export default {
           left: 0;
           top: 0;
           color: red;
+        }
+      }
+    }
+  }
+  .not-winners {
+    margin-top: 18px;
+    border-top: 2px solid rgba(17, 24, 39, 0.1);
+    padding-top: 18px;
+    .count {
+      font-weight: normal;
+      color: rgba(17, 24, 39, 0.6);
+      margin-left: 6px;
+    }
+    .winner {
+      background-color: rgba(255, 255, 255, 0.7);
+      border-color: rgba(17, 24, 39, 0.1);
+      cursor: default;
+      &:hover {
+        &::before {
+          content: '';
+          display: none;
         }
       }
     }

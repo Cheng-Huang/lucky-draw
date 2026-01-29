@@ -267,6 +267,11 @@ export default {
           this.reloadTagCanvas();
         });
       }
+    },
+    showPrizeList(v) {
+      if (v) {
+        this.loadFileConfigIfNeeded();
+      }
     }
   },
   mounted() {
@@ -587,6 +592,10 @@ export default {
 }
 #main {
   height: 100%;
+}
+
+#rootcanvas {
+  transform: translateY(-48px);
 }
 
 #resbox {

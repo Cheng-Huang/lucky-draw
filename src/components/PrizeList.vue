@@ -26,8 +26,6 @@
 </template>
 
 <script>
-import { conversionCategoryName } from '@/helper/index';
-
 export default {
   name: 'PrizeList',
   props: {
@@ -45,7 +43,9 @@ export default {
       const orderedKeys = (this.newLottery || [])
         .map(i => i.key)
         .filter(Boolean);
-      const cfgKeys = Object.keys(cfg);
+      const cfgKeys = Object.keys(cfg).filter(
+        k => k !== 'name' && k !== 'number'
+      );
 
       const keys = orderedKeys.concat(
         cfgKeys.filter(k => !orderedKeys.includes(k))
@@ -53,15 +53,26 @@ export default {
 
       return keys
         .map(key => {
-          const count = cfg[key];
-          const name = conversionCategoryName(key);
+          const count = Number(cfg[key]);
+          if (!Number.isFinite(count) || count <= 0) {
+            return null;
+          }
+
+          const meta = (this.newLottery || []).find(i => i && i.key === key);
+          const name =
+            meta && meta.name
+              ? String(meta.name).trim()
+              : key === 'firstPrize'
+              ? '一等奖'
+              : String(key);
+
           return {
             key,
             name,
-            count: typeof count === 'number' ? count : Number(count)
+            count
           };
         })
-        .filter(item => item.name && item.count > 0);
+        .filter(Boolean);
     },
     groupedPrizes() {
       const groups = new Map();
@@ -102,6 +113,8 @@ export default {
 
 <style lang="scss">
 .c-PrizeList {
+  --prize-safe-x: clamp(80px, 18vw, 680px);
+
   .el-dialog {
     margin: 0 !important;
     top: 0 !important;
@@ -112,7 +125,10 @@ export default {
     max-width: 100vw;
   }
   .el-dialog__header {
-    padding: 16px 34px;
+    padding: 16px var(--prize-safe-x);
+  }
+  .el-dialog__headerbtn {
+    right: var(--prize-safe-x);
   }
   .dialog-title {
     display: flex;
@@ -130,11 +146,12 @@ export default {
   .el-dialog__body {
     height: calc(100vh - 60px) !important;
     overflow: hidden;
-    padding: 0 34px 28px;
+    padding: 0 var(--prize-safe-x) 28px;
   }
   .content {
     height: 100%;
-    max-width: none;
+    width: min(1400px, 100%);
+    margin: 0 auto;
     padding-top: 10px;
     column-gap: 36px;
     column-fill: balance;

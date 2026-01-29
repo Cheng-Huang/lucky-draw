@@ -13,6 +13,10 @@ docker run --rm -p 8080:80 lucky-draw
 
 浏览器打开：`http://localhost:8080`
 
+> Docker 镜像默认按根路径部署（等价于构建时 `PUBLIC_PATH=/`）。如需部署到子路径（例如 `/lucky-draw`），可用构建参数覆盖：
+>
+> `docker build --build-arg PUBLIC_PATH=/lucky-draw -t lucky-draw .`
+
 也可以用 `docker compose`：
 
 ```bash

@@ -19,6 +19,11 @@
             <el-option
               :label="item.label"
               :value="item.value"
+              :disabled="item.done"
+              :class="{
+                'is-drawn': item.drawn && !item.done,
+                'is-done': item.done
+              }"
               v-for="(item, index) in categorys"
               :key="index"
             ></el-option>
@@ -166,10 +171,23 @@ export default {
           const item = this.config[key];
           if (item > 0) {
             let name = conversionCategoryName(key);
-            name &&
+            const drawnCount = Array.isArray(this.result[key])
+              ? this.result[key].length
+              : 0;
+            const remain = Number(item) - drawnCount;
+            const drawn = drawnCount > 0;
+            const done = remain <= 0;
+            const label =
+              name && drawn
+                ? `${name}${done ? '（已抽完）' : '（已抽）'}`
+                : name;
+
+            label &&
               options.push({
-                label: name,
-                value: key
+                label,
+                value: key,
+                drawn,
+                done
               });
           }
         }
@@ -346,10 +364,10 @@ export default {
 <style lang="scss">
 #tool {
   position: fixed;
-  width: 92px;
-  top: 50%;
-  right: 20px;
-  transform: translateY(-50%);
+  width: clamp(140px, 18vw, 220px);
+  left: 50%;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -361,7 +379,7 @@ export default {
     font-size: 20px;
     font-weight: 800;
     border-radius: 12px;
-    padding: 10px 0;
+    padding: 12px 0;
   }
   .el-button + .el-button {
     margin-top: 20px;
@@ -372,6 +390,12 @@ export default {
   .colorred {
     color: red;
     font-weight: bold;
+  }
+  .el-select-dropdown__item.is-drawn {
+    color: #9ca3af;
+  }
+  .el-select-dropdown__item.is-done {
+    color: #9ca3af;
   }
 }
 .import-dialog {
